@@ -1069,13 +1069,17 @@ end
 """
 function isContinousCondition(cond::DAE.Exp, simCode)
   local allCrefs = Util.getAllCrefs(cond)
-  isContinuousCond = false
+  local isContinuousCond = false
   if isone(length(allCrefs)) && string(first(allCrefs)) == "time"
     isContinuousCond = true
   else
     for cref in allCrefs
       local ht = simCode.stringToSimVarHT
-      local var = last(ht[string(cref)])
+      local crefName = string(cref)
+      if crefName == "time"
+        continue
+      end
+      local var = last(ht[crefName])
       #= If one variable in the condition is continuous treat it as a conditinous callback =#
       isContinuousCond = isContinuousCond || !(SimulationCode.isDiscrete(var))
     end

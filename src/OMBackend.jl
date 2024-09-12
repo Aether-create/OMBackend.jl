@@ -40,8 +40,6 @@ include("SimulationCode/SimulationCode.jl")
 include("Runtime/Runtime.jl")
 include("CodeGeneration/CodeGeneration.jl")
 
-export FrontendUtil, BackendUtil, Backend
 #= Finnaly add the API=#
 include("backendAPI.jl")
-include("ifElse.jl")
 end #=OMBackend=#

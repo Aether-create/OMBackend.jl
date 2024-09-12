@@ -31,15 +31,16 @@
 
 module OMBackend
 import DAE
-const CURRENT_DIRECTORY = @__DIR__
-include("$CURRENT_DIRECTORY/globalConstants.jl")
-export PLOT_PACKAGE_GRAPH
-include("$CURRENT_DIRECTORY/FrontendUtil/FrontendUtil.jl")
-include("$CURRENT_DIRECTORY/BackendUtil/BackendUtil.jl")
-include("$CURRENT_DIRECTORY/Backend/Backend.jl")
-include("$CURRENT_DIRECTORY/SimulationCode/SimulationCode.jl")
-include("$CURRENT_DIRECTORY/Runtime/Runtime.jl")
-include("$CURRENT_DIRECTORY/CodeGeneration/CodeGeneration.jl")
+
+include("globalConstants.jl")
+include("FrontendUtil/FrontendUtil.jl")
+include("BackendUtil/BackendUtil.jl")
+include("Backend/Backend.jl")
+include("SimulationCode/SimulationCode.jl")
+include("Runtime/Runtime.jl")
+include("CodeGeneration/CodeGeneration.jl")
+
+export FrontendUtil, BackendUtil, Backend
 #= Finnaly add the API=#
 include("backendAPI.jl")
 include("ifElse.jl")

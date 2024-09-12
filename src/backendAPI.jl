@@ -84,20 +84,10 @@ end
 """
 const COMPILED_MODELS_MTK = Dict()
 
-function translate(frontendDAE::Union{DAE.DAE_LIST, OMFrontend.Main.FlatModel}; BackendMode = MTK_MODE)::Tuple{String, Expr}
-  local bDAE = lower(frontendDAE)
-  local simCode
-  if BackendMode == DAE_MODE
-    throw("DAE mode is removed.")
-  elseif BackendMode == MTK_MODE
-    @debug "Experimental: Generates and runs code using modelling toolkit"
-    simCode = generateSimulationCode(bDAE; mode = MTK_MODE)
-    return generateMTKTargetCode(simCode)
-  else
-    @error "No mode specificed: valid modes are:"
-    println("DAE_MODE")
-    println("ModelingToolkit_MODE")
-  end
+function translate(frontendDAE::Union{DAE.DAE_LIST, OMFrontend.Main.FlatModel})::Tuple{String, Expr}
+  bDAE = lower(frontendDAE)
+  simCode = generateSimulationCode(bDAE; mode = MTK_MODE)
+  return generateMTKTargetCode(simCode)
 end
 
 """
@@ -184,23 +174,6 @@ end
 
 
 """
-  Generates code interfacing DifferentialEquations.jl
-  The resulting code is saved in a dictonary which contains functions that where simulated
-  this session. Returns the generated modelName and corresponding generated code
-"""
-function generateTargetCode(simCode::SimulationCode.SIM_CODE)
-  #= Target code =#
-  (modelName::String, modelCode::Expr) = CodeGeneration.generateCode(simCode)
-  @debug "Functions:" modelCode
-  @debug "Model:" modelName
-  #= TODO: This replacement should ideally be done earlier. Or be solved in a nicer way. =#
-  modelName = replace(modelName, "." => "__")
-  COMPILED_MODELS[modelName] = modelCode
-  return (modelName, modelCode)
-end
-
-
-"""
 `generateMTKTargetCode(simCode::SimulationCode.SIM_CODE)`
   Generates code interfacing ModelingToolkit.jl
   The resulting code is saved in a table which contains functions that where simulated
@@ -236,7 +209,7 @@ end
 """
   Writes a model to file by default the file is formatted and comments are kept.
 """
-function writeModelToFile(modelName::String, filePath::String; keepComments = true, formatFile = true, mode = MTK_MODE)
+function writeModelToFile(modelName::String, filePath::String; keepComments = true, formatFile = true)
   model = getCompiledModel(modelName)
   fileName = "$modelName.jl"
   try
@@ -272,7 +245,7 @@ end
   Prints a model. 
   If the specified model exists. Print it to stdout.
 """
-function printModel(modelName::String; MTK = true, keepComments = true, keepBeginBlocks = true)
+function printModel(modelName::String; keepComments = true, keepBeginBlocks = true)
   try
     local model::Expr
     model = getCompiledModel(modelName)
@@ -312,41 +285,35 @@ end
 The solver need to be passed with a : before the name, example:
 OMBackend.simulateModel(modelName, tspan = (0.0, 1.0), solver = :(Tsit5()));
 """
-function simulateModel(modelName::String;
-                       MODE = MTK_MODE,
-                       tspan=(0.0, 1.0), solver = :(Rodas5()))
+function simulateModel(modelName::String; tspan=(0.0, 1.0), solver = :(Rodas5()))
   #= Strings containing . need to be in a format suitable for Julia =#
   modelName = replace(modelName, "." => "__")
   local modelCode::Expr  
-  if MODE == MTK_MODE
-    #= This does a redundant string conversion for now due to modeling toolkit being as is...=#
-    try
-      modelCode = getCompiledModel(modelName)
-    catch err
-      println("Failed to simulate model.")
-      println("Available models are:")
-      availableModels()
-    end
-    try
-      @eval $(:(import OMBackend))
-      #= Below is needed to pass the custom solver=#
-      strippedModel = CodeGeneration.stripBeginBlocks(modelCode)
-      @eval $strippedModel
-      local modelRunnable = Meta.parse("OMBackend.$(modelName)Simulate($(tspan); solver = $solver)")
-      #= Run the model with the supplied tspan. =#
-      @eval $modelRunnable
-      #=
-      The model is now compiled and a part of the OMBackend module.
-      In the following path OMBackend.<modelName>Simulate
-      =#
-    catch err
-      @info "Interactive evaluation failed: $err with mode: $(MODE)"
-      @info err #TODO readd.
+
+  try
+    modelCode = getCompiledModel(modelName)
+  catch err
+    println("Failed to simulate model.")
+    println("Available models are:")
+    availableModels()
+  end
+  try
+    @eval $(:(import OMBackend))
+    #= Below is needed to pass the custom solver=#
+    strippedModel = CodeGeneration.stripBeginBlocks(modelCode)
+    @eval $strippedModel
+    local modelRunnable = Meta.parse("OMBackend.$(modelName)Simulate($(tspan); solver = $solver)")
+    #= Run the model with the supplied tspan. =#
+    @eval $modelRunnable
+    #=
+    The model is now compiled and a part of the OMBackend module.
+    In the following path OMBackend.<modelName>Simulate
+    =#
+  catch err
+    @info "Interactive evaluation failed: $err with mode: $(MODE)"
+    @info err #TODO readd.
 #      println(modelCode)
-      throw(err)
-    end
-  else
-    throw("Unsupported mode")
+    throw(err)
   end
 end
 
@@ -354,11 +321,7 @@ end
   Resimulates an already compiled model given a model that is already active in th environment
   along with a set of parameters as key value pairs.
 """
-function resimulateModel(modelName::String;
-                         solver = Rodas5(),
-                         MODE = MTK_MODE,
-                         tspan=(0.0, 1.0),
-                         parameters::Dict = Dict())
+function resimulateModel(modelName::String; solver = :(Rodas5()), tspan=(0.0, 1.0), parameters::Dict = Dict())
   #=
   Check if a compiled instance of the model already exists in the backend.
   If that is the case we do not have to recompile it.
@@ -372,42 +335,6 @@ function resimulateModel(modelName::String;
     availModels = availableModels()
     @error "The model $(modelName) is not compiled.\n Available models are: $(availModels)"        
   end
-end
-
-"
-`plot(sol::Runtime.OMSolution)`
-  The default plot function of OMBackend.
-  All labels of the variables and the name is given by default
-"
-function plot(sol::Runtime.OMSolution)
-  local nsolution = sol.diffEqSol
-  local t = nsolution.t
-  local rescols = collect(eachcol(transpose(hcat(nsolution.u...))))
-  labels = permutedims(sol.idxToName.vals)
-  Plots.plot(t, rescols; labels=labels)
-end
-
-"
-`function plot(sol)`
-  An alternative plot function in OMBackend.
-  All labels of the variables and the name is given by default
-"
-function plot(sol)
-  Plots.plot(sol)
-end
-
-"""
-  Plotting program for an OMSolution that contains several sub solutions.
-  Plots all part of the solution on the same graph.
-"""
-function plot(sol::Runtime.OMSolutions; legend = false, limX = 0.0, limY = 1.0)
-  local sols = sol.diffEqSol
-  local prevP = Plots.plot!(sols[1]; legend = legend, xlim=limX, ylim = limY)
-  for sol in sols[2:end]
-    p = Plots.plot!(prevP; legend = legend, xlim=limX, ylim = limY)
-    prevP = p
-  end
-  return prevP
 end
 
 """

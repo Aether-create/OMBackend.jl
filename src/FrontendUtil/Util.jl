@@ -1,6 +1,7 @@
 module Util
 
 import DAE
+import Absyn 
 import DoubleEnded
 
 using MetaModelica
@@ -57,13 +58,13 @@ function traverseExpTopDown1(continueTraversal::Bool, inExp::DAE.Exp, func::Func
     local isExpisASUB::Option{Tuple{DAE.Exp, ModelicaInteger, ModelicaInteger}}
     local lstexpl::List{List{DAE.Exp}}
     local lstexpl_1::List{List{DAE.Exp}}
-    local op::Operator
+    # local op::Operator
     local reductionInfo::DAE.ReductionInfo
     local rel::Function
     local riters::DAE.ReductionIterators
     local scalar::Bool
-    local t::Type
-    local tp::Type
+    # local t::Type
+    # local tp::Type
 
     if !continueTraversal
       return (inExp, inArg)
@@ -322,7 +323,7 @@ function traverseExpTopDownCrefHelper(inCref::DAE.ComponentRef, rel::Function, i
     local name::String
     local subs::List{DAE.Subscript}
     local subs_1::List{DAE.Subscript}
-    local ty::Type
+    # local ty::Type
     @match (inCref, rel, iarg) begin
       (DAE.CREF_QUAL(ident = name, identType = ty, subscriptLst = subs, componentRef = cr), _, arg)  => begin
         (subs_1, arg) = traverseExpTopDownSubs(subs, rel, arg)

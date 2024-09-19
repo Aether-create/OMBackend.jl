@@ -263,7 +263,8 @@ function ODE_MODE_MTK_MODEL_GENERATION(simCode::SimulationCode.SIM_CODE, modelNa
       eqs =  collect(Iterators.flatten(equationComponents))
       nonLinearSystem = OMBackend.CodeGeneration.makeODESystem(eqs, t, vars, parameters, $(performIndexReduction); name=:($(Symbol($modelName))))
       firstOrderSystem = nonLinearSystem #ModelingToolkit.ode_order_lowering(nonLinearSystem)
-      $(MTK_indexReduction(performIndexReduction))
+      # $(MTK_indexReduction(performIndexReduction))
+      reducedSystem = ModelingToolkit.structural_simplify(firstOrderSystem; simplify=true)
       #=
         These arrays are introduced to handle the bolted on event handling using callbacks.
         The callback handling for MTK is subject of change should hybrid system be implemented for MTK.

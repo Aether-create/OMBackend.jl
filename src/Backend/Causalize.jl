@@ -74,8 +74,8 @@ end
 """
 function detectStatesEqSystem(syst::BDAE.EQSYSTEM)::BDAE.EQSYSTEM
   syst = begin
-    local vars::BDAE.Variables
-    local eqs::Array
+    # local vars::BDAE.Variables
+    # local eqs::Array
     local stateCrefs = Dict{DAE.ComponentRef, Bool}()
     @match syst begin
       BDAE.EQSYSTEM(name, vars, eqs, simpleEqs, initialEqs) => begin
@@ -97,8 +97,8 @@ Author johti17:
 """
 function replaceArrayVariables(syst::BDAE.EQSYSTEM, expandedVariables::Array)
   syst = begin
-    local vars::BDAE.Variables
-    local eqs::Array
+    # local vars::BDAE.Variables
+    # local eqs::Array
     local arrayCrefs = Dict{String, Bool}([(i.varName.ident, false) for i in expandedVariables])
     @match syst begin
       BDAE.EQSYSTEM(name, vars, eqs, simpleEqs, initialEqs) => begin
@@ -349,7 +349,7 @@ function updateStates(vars::Vector, stateCrefs::Dict{DAE.ComponentRef, Bool})
   for i in 1:arrayLength(varArr)
     varArr[i] = begin
       local cref::DAE.ComponentRef
-      local var::BDAE.Var
+      # local var::BDAE.Var
       @match varArr[i] begin
         var && BDAE.VAR(varName = cref) where (haskey(stateCrefs, cref)) => begin
           @assign var.varKind = BDAE.STATE(0, NONE(), true)
